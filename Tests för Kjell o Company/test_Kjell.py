@@ -53,9 +53,9 @@ def driver(request):
             raise ValueError(f"Bad input from --browser variable [{BROWSER}]. Did you misspell it?")
     driver.get(HOMEPAGE)
     # TODO fails to find/press accept sometimes?
-    wait_and_click(driver, "//span[text()='Acceptera']/..")  # accept cookies as it obscures some elements
+    wait_and_click(driver, "//span[text()='Acceptera alla']/..")  # accept cookies as it obscures some elements
     WebDriverWait(driver, timeout=MAX_TIMEOUT).until(
-        ec.invisibility_of_element((By.XPATH, "//span[text()='Acceptera']/..")))
+        ec.invisibility_of_element((By.XPATH, "//span[text()='Acceptera alla']/..")))
     yield driver
     driver.delete_all_cookies()
     driver.quit()
@@ -151,13 +151,13 @@ class TestKjell:
         assert "kjell" in driver.title.lower()
 
     def test_search_bar(self, driver):
-        search_bar = wait_and_get_element(driver, '//form/div[1]/input')
+        search_bar = wait_and_get_element(driver, "//form[@role='search']//input[@type='search']")
         search_bar.send_keys("test", Keys.RETURN)
-        assert wait_and_get_element(driver, "//h3[contains(., 'Kabeltestare')]")
+        assert wait_and_get_element(driver, "//h3[contains(., 'Testmejsel')]")
 
     def test_choose_store(self, driver):
-        wait_and_click(driver, "//button[@data-test-id='main-menu-button']", center_scroll=False)  # menu button
-        wait_and_click(driver, "//div[@data-test-id='my-store-button']", center_scroll=False)  # choose store
+        wait_and_click(driver, "//*[@data-test-id='main-menu-button']", center_scroll=False)  # menu button
+        wait_and_click(driver, "//*[@data-test-id='my-store-button']", center_scroll=False)  # choose store
 
         wait_and_click(driver, "//li[contains(.,'Kalmar')]")  # select store
         wait_and_click(driver, "//button[@data-test-id='choose-store-button']", center_scroll=False)  # accept store
@@ -165,22 +165,33 @@ class TestKjell:
 
         # sleep needed? seems to click but not registering if there is no sleep
         sleep(1)
-        wait_and_click(driver, "//button[@data-test-id='main-menu-button']", center_scroll=False)  # menu button
+        wait_and_click(driver, "//*[@data-test-id='drawer-menu-close-button']", center_scroll=False)  # menu button
         # check chosen store
         # TODO this element cant be found often, menu button fail to press? without sleep it's even worse...
         chosen_store = wait_and_get_element(driver,
-                                            "//div[@data-test-id='my-store-button']/div/div[2]", center_scroll=False)
-        assert "kalmar" in chosen_store.text.lower()
+                                            "//span[@id='store_name']"
+                                            , center_scroll=False).text
+        assert "kalmar" in chosen_store.lower()
 
-    @pytest.mark.skip(reason="test_search_exact: Not implemented on site. "
-                             "Does something with quotation but doesnt search for exact.")
-    def test_search_exact(self, driver):
-        search_bar = driver.find_element(By.XPATH, '//form/div[1]/input')
-        search_bar.send_keys("\"test\"", Keys.RETURN)
+    # Site does NOT handle partial words.
+    # If this changes, this should fail and be updated to reflect the addition. 
+    def test_search_partial_name(self, driver):
+        search_bar = wait_and_get_element(driver, "//form[@role='search']//input[@type='search']")
+        search_bar.send_keys("provare", Keys.RETURN)
         # wait for element on left side to load
-        wait_and_get_element(driver, "//div[2]/div[1]/div/div[@data-test-id='product-card']")
+        wait_and_get_element(driver, "//*[@data-test-id='product-card']")
         products_list = [e.text for e in driver.find_elements(By.XPATH, "//h3")]
-        assert "test" in products_list[0].lower()
+        assert all("spänningsprovare" not in p.lower() for p in products_list)
+
+        # Validate that the item does exist
+        search_bar = wait_and_get_element(driver, "//form[@role='search']//input[@type='search']")
+        search_bar.send_keys(Keys.CONTROL, "a")
+        search_bar.send_keys(Keys.BACKSPACE)
+        search_bar.send_keys("spänningsprovare", Keys.RETURN)
+        # wait for element on left side to load
+        wait_and_get_element(driver, "//*[@data-test-id='product-card']")
+        products_list = [e.text for e in driver.find_elements(By.XPATH, "//h3")]
+        assert any("spänningsprovare" in p.lower() for p in products_list)
 
     def test_find_item_out_of_stock(self, driver):
         search_bar = driver.find_element(By.XPATH, '//form/div[1]/input')
