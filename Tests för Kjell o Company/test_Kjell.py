@@ -6,6 +6,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import StaleElementReferenceException
 from selenium.common.exceptions import ElementClickInterceptedException
 from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import JavascriptException
 import logging
 import pytest
 from time import sleep
@@ -16,6 +17,8 @@ HEADLESS = ''
 logging.basicConfig(level=logging.WARNING)
 MAX_FAILS = 5
 MAX_TIMEOUT = 5
+
+SEARCH_BAR_XPATH = "//form[@role='search']//input[@type='search']"
 
 
 @pytest.fixture(autouse=True, scope='function')
@@ -145,13 +148,50 @@ def wait_and_get_element(active_driver, path, center_scroll=True, max_fails=MAX_
                 raise TimeoutException(f"Too many timeouts! {path=}")
             sleep(1)
 
+def wait_and_get_elements(active_driver, path, require_text=False, center_scroll=False, max_fails=MAX_FAILS):
+    tries = 0
+    while True:
+        try:
+            # added scrolling to bottom, seemed to fix some elements never loading?
+            active_driver.execute_script(f"window.scrollBy(0, document.body.scrollHeight);")
+            # wait for element to be available if needed.
+            elements = WebDriverWait(active_driver, timeout=MAX_TIMEOUT).until(
+                ec.presence_of_all_elements_located((By.XPATH, path)))
+            # move_to_element action doesn't scroll on firefox, had to use javascript instead.
+            if center_scroll and elements:
+                try:
+                    active_driver.execute_script("arguments[0].scrollIntoView(true);", elements[0])
+                    active_driver.execute_script("window.scrollBy(0, -650);")
+                except JavascriptException as e:
+                    logging.warning(f"Could not scroll to element {path=}")
+            # If require_text, access .text on all elements. If stale/not ready, StaleElementReferenceException triggers retry
+            if require_text:
+               [e.text for e in elements]
+            #TODO, above doesnt actually wait for text if text is empty. is this a problem?
+            #    for element in elements:
+            #        if not element.text.strip():
+            #            raise StaleElementReferenceException(f"Element {element} has no text yet")
+            return elements
+        except StaleElementReferenceException as e:
+            logging.warning(f"Element {path=} was stale! Trying again")
+            tries += 1
+            if tries > max_fails:
+                raise StaleElementReferenceException(f"Too many stale elements! {path=}")
+            sleep(1)
+        except TimeoutException as e:
+            logging.warning(f"Timeout on element {path=}! Trying again")
+            tries += 1
+            if tries > max_fails:
+                raise TimeoutException(f"Too many timeouts! {path=}")
+            sleep(1)
+
 
 class TestKjell:
     def test_open_homepage(self, driver):
         assert "kjell" in driver.title.lower()
 
     def test_search_bar(self, driver):
-        search_bar = wait_and_get_element(driver, "//form[@role='search']//input[@type='search']")
+        search_bar = wait_and_get_element(driver, SEARCH_BAR_XPATH)
         search_bar.send_keys("test", Keys.RETURN)
         assert wait_and_get_element(driver, "//h3[contains(., 'Testmejsel')]")
 
@@ -176,33 +216,35 @@ class TestKjell:
     # Site does NOT handle partial words.
     # If this changes, this should fail and be updated to reflect the addition. 
     def test_search_partial_name(self, driver):
-        search_bar = wait_and_get_element(driver, "//form[@role='search']//input[@type='search']")
+        search_bar = wait_and_get_element(driver, SEARCH_BAR_XPATH)
         search_bar.send_keys("provare", Keys.RETURN)
-        # wait for element on left side to load
-        wait_and_get_element(driver, "//*[@data-test-id='product-card']")
-        products_list = [e.text for e in driver.find_elements(By.XPATH, "//h3")]
-        assert all("spänningsprovare" not in p.lower() for p in products_list)
+        product_elements = wait_and_get_elements(driver, "//h3", require_text=True)
+        products_list = [e.text.lower() for e in product_elements]
+        assert all("spänningsprovare" not in p for p in products_list)
 
-        # Validate that the item does exist
-        search_bar = wait_and_get_element(driver, "//form[@role='search']//input[@type='search']")
+        # Reset
+        search_bar = wait_and_get_element(driver, SEARCH_BAR_XPATH)
         search_bar.send_keys(Keys.CONTROL, "a")
         search_bar.send_keys(Keys.BACKSPACE)
+
+        # Validate that the item does exist
         search_bar.send_keys("spänningsprovare", Keys.RETURN)
-        # wait for element on left side to load
-        wait_and_get_element(driver, "//*[@data-test-id='product-card']")
-        products_list = [e.text for e in driver.find_elements(By.XPATH, "//h3")]
+        product_elements = wait_and_get_elements(driver, "//h3", require_text=True)
+        products_list = [e.text.lower() for e in product_elements]
         assert any("spänningsprovare" in p.lower() for p in products_list)
 
     def test_find_item_out_of_stock(self, driver):
-        search_bar = driver.find_element(By.XPATH, '//form/div[1]/input')
+        search_bar = wait_and_get_element(driver, SEARCH_BAR_XPATH)
         search_bar.send_keys("test", Keys.RETURN)
-        # wait for products to load
-        wait_and_get_element(driver, "//div[2]/div[1]/div/div[@data-test-id='product-card']")
-        # gets first item that is out of stock and clicks it
-        if not driver.find_elements(By.XPATH, "//*[@id='outofstock_a']/../../../../../../a"):
+
+        wait_and_click(driver, "//*[@aria-label='Produkter']//button[normalize-space()='Visa alla']")
+        try:
+            # gets first item that is out of stock and clicks it
+            wait_and_get_elements(driver, "//*[@id='outofstock_a']//a")
+        except TimeoutException:
             logging.warning("No products out of stock? Skipping")
             pytest.skip("Seems all products are in stock today!")
-        wait_and_click(driver, "//*[@id='outofstock_a']/../../../../../../a")
+        wait_and_click(driver, "//*[@id='outofstock_a']//a")
         # checks if the button "Bevaka" is there instead of add to cart.
         assert wait_and_get_element(driver, "//button[contains(text(), 'Bevaka')]")
 
