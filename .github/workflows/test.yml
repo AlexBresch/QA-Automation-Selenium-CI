@@ -28,11 +28,22 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Install browsers
+      #Snap-based installs were unstable in CI, so I switched to browser-actions for reliability.
+      #- name: Install browsers run: | 
+      #  sudo apt-get update sudo apt-get install -y chromium-browser firefox
+
+      - name: Setup Chrome
+        uses: browser-actions/setup-chrome@v1.1.0
+        
+      - name: Setup Firefox
+        uses: browser-actions/setup-firefox@v1
+        
+      - name: Setup Edge
         run: |
-          sudo apt-get update
-          sudo apt-get install -y chromium-browser firefox
+          sudo apt update
+          sudo apt install -y microsoft-edge-stable || echo "Edge install failed, continuing"
           
       - name: Run tests
         run: |
-          pytest -v --browser=${{ matrix.browser }} --headless=true tests/
+          pytest -v --browser=${{ matrix.browser }} --headless=true ./Tests
+          
