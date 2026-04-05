@@ -33,12 +33,15 @@ jobs:
       #  sudo apt-get update sudo apt-get install -y chromium-browser firefox
 
       - name: Setup Chrome
-        uses: browser-actions/setup-chrome@v1.1.0
-        
+        if: matrix.browser == 'chrome'
+        uses: browser-actions/setup-chrome@v1
+    
       - name: Setup Firefox
+        if: matrix.browser == 'firefox'
         uses: browser-actions/setup-firefox@v1
-        
+    
       - name: Setup Edge
+        if: matrix.browser == 'edge'
         run: |
           sudo apt update
           sudo apt install -y microsoft-edge-stable || echo "Edge install failed, continuing"
@@ -46,4 +49,3 @@ jobs:
       - name: Run tests
         run: |
           pytest -v --browser=${{ matrix.browser }} --headless=true ./Tests
-          
