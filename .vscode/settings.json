@@ -1,6 +1,6 @@
 {
     "python.testing.pytestArgs": [
-        "Tests för Kjell o Company"
+        "Tests"
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true
