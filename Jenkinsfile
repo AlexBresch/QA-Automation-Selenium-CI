@@ -8,7 +8,7 @@ pipeline {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE'){
                     bat encoding: 'UTF-8', script: """
                     chcp 65001
-                    pytest -s --tb=short --log-cli-level=INFO --browser=chrome ".\\Tests för Kjell o Company\\test_Kjell.py"
+                    pytest -s --tb=short --log-cli-level=INFO --browser=chrome ".\\Tests\\test_Kjell.py"
                     @echo Chrome tests done!
                      """
                 }
@@ -20,7 +20,7 @@ pipeline {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE'){
                     bat encoding: 'UTF-8', script: """
                     chcp 65001
-                    pytest -s --tb=short --log-cli-level=INFO --browser=firefox ".\\Tests för Kjell o Company\\test_Kjell.py"
+                    pytest -s --tb=short --log-cli-level=INFO --browser=firefox ".\\Tests\\test_Kjell.py"
                     @echo Firefox tests done!
                      """
                 }
@@ -32,7 +32,7 @@ pipeline {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE'){
                     bat encoding: 'UTF-8', script: """
                     chcp 65001
-                    pytest -s --tb=short --log-cli-level=INFO --browser=edge ".\\Tests för Kjell o Company\\test_Kjell.py"
+                    pytest -s --tb=short --log-cli-level=INFO --browser=edge ".\\Tests\\test_Kjell.py"
                     @echo Edge tests done!
                      """
                 }

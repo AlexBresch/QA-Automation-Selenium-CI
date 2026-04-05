@@ -1,28 +1,143 @@
-# SkolaTestautomation
+# QA Automation Project â€“ Selenium, Pytest, CI
 
-Test automation av sidan https://www.kjell.com/se
+## Overview
 
-Att göra; 
+This project demonstrates end-to-end test automation of a real-world e-commerce website using Selenium and Python.
 
-	Test analys av sidan:
-		- [x] Navigering
-		- [ ] Filtrering/Sökning
-			- [x] Olika kategorier
-			- [x] Sökfunktioner
-			- [ ] Olika filter
-			- [ ] Olika visnings ordning
-		- [ ] Lägga till i kundkorg
-			- [ ] Kontroller av kundkorg
-				- [x] Summa
-				- [x] Varor
-				- [ ] Ändra antal varor
-				- [ ] Uppdateras rätt
-	
-	
-	Extra:
-		- [ ] Inloggning
-			- [ ] Testa inlogg m.m.
-				- [ ] Begränsningar
-				- [ ] hitta fel?
-				- [ ] Olika skärmstorlekar?
-		
+The focus is on validating system behaviour and data consistency, not only UI interactions. The tests are designed to reflect realistic user flows and to verify that the system behaves correctly under dynamic conditions.
+
+---
+
+## What is being tested
+
+The test suite covers core user journeys and system behaviour, including:
+
+* Homepage availability and basic validation
+* Product search functionality and result validation
+* Navigation through dynamic menus
+* Store selection and session-dependent behaviour
+* Handling of out-of-stock products
+* Adding products to cart
+* Validation of cart contents and total price consistency
+
+The tests aim to verify both functionality and correctness of business logic.
+
+---
+
+## Testing approach
+
+Tests are structured around user behaviour and end-to-end flows rather than isolated UI elements.
+
+Key aspects include:
+
+* Validation of complete flows (search â†’ product â†’ cart)
+* Handling of dynamic and asynchronous UI behaviour
+* Retry and wait strategies to reduce flakiness
+* Assertions focused on system correctness and consistency
+
+The approach reflects testing in integration-heavy systems, where behaviour and data integrity are critical.
+
+---
+
+## Tech stack
+
+* Python
+* Selenium WebDriver
+* Pytest
+* GitHub Actions (CI)
+* Jenkins (previously used for CI)
+
+---
+
+## CI / Automation
+
+Tests are automatically executed using GitHub Actions on push.
+
+The project has also been executed in Jenkins, demonstrating experience with both pipeline-based and repository-based CI workflows.
+
+---
+
+## How to run locally
+
+### 1. Clone the repository
+
+```
+git clone https://github.com/AlexBresch/QA-Automation-Selenium-CI
+cd QA-Automation-Selenium-CI
+```
+
+### 2. Create virtual environment
+
+```
+python -m venv .venv
+```
+
+### 3. Activate environment
+
+Windows:
+
+```
+.venv\Scripts\activate
+```
+
+Mac/Linux:
+
+```
+source .venv/bin/activate
+```
+
+### 4. Install dependencies
+
+```
+pip install -r requirements.txt
+```
+
+### 5. Run tests
+
+```
+pytest -v
+```
+
+---
+
+## Optional parameters
+
+Tests support runtime configuration:
+
+```
+pytest --browser=chrome --headless=true
+```
+
+Supported browsers:
+
+* chrome
+* firefox
+* edge
+
+---
+
+## What this project demonstrates
+
+* Test design for realistic user flows
+* Handling of dynamic and unstable UI elements
+* Validation of business logic, not only UI elements
+* Structured test execution using pytest
+* Cross-browser test execution
+* CI integration with GitHub Actions and Jenkins
+* Practical use of Python for QA automation
+
+---
+
+## Notes
+
+* Tests run against a live public website, and behaviour may change over time
+* Some retry logic is implemented to handle dynamic frontend behaviour
+* One test is currently under refinement
+
+---
+
+## About
+
+This project is part of my work transitioning toward QA Automation and Test Engineering roles, building on experience in integration-heavy systems, data validation, and structured testing in production environments.
+
+The focus is on combining strong testing fundamentals with automation where it adds value.
