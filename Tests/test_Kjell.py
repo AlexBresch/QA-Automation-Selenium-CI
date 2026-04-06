@@ -15,8 +15,8 @@ HOMEPAGE = "https://www.kjell.com/se/"
 BROWSER = ''
 HEADLESS = ''
 logging.basicConfig(level=logging.WARNING)
-MAX_FAILS = 5
-MAX_TIMEOUT = 5
+MAX_FAILS = 3
+MAX_TIMEOUT = 3
 
 SEARCH_BAR_XPATH = "//form[@role='search']//input[@type='search']"
 
@@ -148,7 +148,8 @@ def wait_and_get_element(active_driver, path, center_scroll=True, max_fails=MAX_
                 raise TimeoutException(f"Too many timeouts! {path=}")
             sleep(1)
 
-def wait_and_get_elements(active_driver, path, require_text=False, center_scroll=False, max_fails=MAX_FAILS):
+def wait_and_get_elements(active_driver, path, require_text=False, center_scroll=False,
+                          text_contains=None, max_fails=MAX_FAILS):
     tries = 0
     while True:
         try:
@@ -164,13 +165,14 @@ def wait_and_get_elements(active_driver, path, require_text=False, center_scroll
                     active_driver.execute_script("window.scrollBy(0, -650);")
                 except JavascriptException as e:
                     logging.warning(f"Could not scroll to element {path=}")
-            # If require_text, access .text on all elements. If stale/not ready, StaleElementReferenceException triggers retry
+            # If require_text, force text evaluation to avoid returning still-loading elements.
             if require_text:
-               [e.text for e in elements]
-            #TODO, above doesnt actually wait for text if text is empty. is this a problem?
-            #    for element in elements:
-            #        if not element.text.strip():
-            #            raise StaleElementReferenceException(f"Element {element} has no text yet")
+                element_texts = [e.text.strip() for e in elements]
+                if any(not text for text in element_texts):
+                    raise TimeoutException(f"Elements matched {path=} but text is still empty")
+                if text_contains and not any(text_contains.lower() in text.lower() for text in element_texts):
+                    raise TimeoutException(f"Elements matched {path=} but text '{text_contains}' not found yet")
+                
             return elements
         except StaleElementReferenceException as e:
             logging.warning(f"Element {path=} was stale! Trying again")
@@ -200,20 +202,17 @@ class TestKjell:
         wait_and_click(driver, "//*[@data-test-id='my-store-button']", center_scroll=False)  # choose store
 
         wait_and_click(driver, "//li[contains(.,'Kalmar')]")  # select store
-        wait_and_click(driver, "//button[@data-test-id='choose-store-button']", center_scroll=False)  # accept store
-        # ec.invisibility_of_element_located((By.XPATH, "//div[@class='m5']"))  # wait for menu to closed
+        # Site removed data-test-id, fallback to selecting button within store list item
+        # wait_and_click(driver, "//button[@data-test-id='choose-store-button']", center_scroll=False)  # accept store
+        wait_and_click(driver, "//li[contains(.,'Kalmar')]//button", center_scroll=False)  # accept store
 
-        # sleep needed? seems to click but not registering if there is no sleep
-        sleep(1)
         wait_and_click(driver, "//*[@data-test-id='drawer-menu-close-button']", center_scroll=False)  # menu button
         # check chosen store
-        # TODO this element cant be found often, menu button fail to press? without sleep it's even worse...
-        chosen_store = wait_and_get_element(driver,
-                                            "//span[@id='store_name']"
-                                            , center_scroll=False).text
+        # TODO this element cant be found often, menu button fail to press? seem to have gotten better now.
+        chosen_store = wait_and_get_element(driver, "//span[@id='store_name']", center_scroll=False).text
         assert "kalmar" in chosen_store.lower()
 
-    # Site does NOT handle partial words.
+    # Site does NOT handle partial words (suffixes).
     # If this changes, this should fail and be updated to reflect the addition. 
     def test_search_partial_name(self, driver):
         search_bar = wait_and_get_element(driver, SEARCH_BAR_XPATH)
@@ -226,10 +225,10 @@ class TestKjell:
         search_bar = wait_and_get_element(driver, SEARCH_BAR_XPATH)
         search_bar.send_keys(Keys.CONTROL, "a")
         search_bar.send_keys(Keys.BACKSPACE)
-
+        
         # Validate that the item does exist
         search_bar.send_keys("spänningsprovare", Keys.RETURN)
-        product_elements = wait_and_get_elements(driver, "//h3", require_text=True)
+        product_elements = wait_and_get_elements(driver, "//h3", require_text=True, text_contains="spänningsprovare")
         products_list = [e.text.lower() for e in product_elements]
         assert any("spänningsprovare" in p.lower() for p in products_list)
 
@@ -244,8 +243,8 @@ class TestKjell:
             logging.warning("No products out of stock? Skipping")
             pytest.skip("Seems all products are in stock today!")
         wait_and_click(driver, "//*[@id='outofstock_a']/ancestor::div[a][1]//a")
-        # checks if the button "Bevaka" is there instead of add to cart.
-        assert wait_and_get_element(driver, "//button[contains(text(), 'Bevaka')]")
+        # checks if an element contains "Ej i lager" on the product site.
+        assert wait_and_get_element(driver, "//*[contains(text(), 'Ej i lager')]")
 
     def test_find_item_through_menu(self, driver):
         # navigate left menu
