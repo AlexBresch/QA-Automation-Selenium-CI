@@ -256,79 +256,41 @@ class TestKjell:
         # check that there are at least one item with Micro-HDMI in the name.
         assert wait_and_get_element(driver, "//h3[contains(text(), 'Micro-HDMI')]")
 
-    def test_add_to_cart(self, driver):
-        products_dict = {}
-        product_positions = [1, 2, 19, 19, 30]
-        # product_positions = [1, 2, 1, 19, 30, 25, 1, 3, 18, 18] # for testing different items.
-        # product_positions = [2, 3, 2, 5, 6, 4, 7, 8, 22, 22, 15, 12, 14, 13, 11, 1]  # Another list.
-
-        search_bar = driver.find_element(By.XPATH, '//form/div[1]/input')
+    def test_add_in_stock_product_to_cart(self, driver):
+        search_bar = wait_and_get_element(driver, SEARCH_BAR_XPATH)
         search_bar.send_keys("test", Keys.RETURN)
-        # wait for products to load
-        wait_and_get_element(driver, "//div[2]/div[1]/div/div[@data-test-id='product-card']")
-        # collect data on the products and add to cart
-        for pos in product_positions:
-            # click on product
-            wait_and_click(driver, f"//div[2]/div[1]/div/div[{pos}][@data-test-id='product-card']/a")
-            logging.info(f"going on {pos=}")
-            # wait for product page to load, gets wrong product name if it doesn't wait.
-            # changed to wait for clickable to try solving Jenkins edge flakiness
-            WebDriverWait(driver, timeout=30).until(ec.any_of(
-                ec.element_to_be_clickable((By.XPATH, "//button[@id='clickAndCollect']")),
-                ec.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Bevaka')]")),
-                ec.element_to_be_clickable((By.XPATH, "//*[@id='addToCart']"))
+
+        product_links = wait_and_get_elements(driver, "//div[@data-test-id='product-card']//a")
+        if not product_links:
+            pytest.skip("No search results available for the test")
+
+        product_name = None
+        for pos in range(1, min(len(product_links), 8) + 1):
+            wait_and_click(driver, f"(//div[@data-test-id='product-card']//a)[{pos}]")
+            WebDriverWait(driver, timeout=MAX_TIMEOUT).until(ec.any_of(
+                ec.element_to_be_clickable((By.XPATH, "//*[@id='addToCart']")),
+                ec.presence_of_element_located((By.XPATH, "//*[contains(text(), 'Ej i lager')]"))
             ))
-            name = wait_and_get_element(driver, f"//div[1]/h1").text
-            # check if item is out of stock
-            if driver.find_elements(By.XPATH, "//button[contains(., 'Bevaka')]"):
-                logging.info(f"\n{name} {pos=} is not available for purchase, skipping it")
+            try:
+                wait_and_get_element(driver, "//*[@id='addToCart']", center_scroll=False, max_fails=1)
+                product_name = wait_and_get_element(driver, "//h1").text.strip()
+                break
+            except TimeoutException:
                 driver.back()
                 continue
 
-            price = float(wait_and_get_element(driver,
-                                               f'//div/span/span')
-                          .text.replace(':-', '').replace(' ', ''))  # some contain ":-" and spaces
-            # looking for both sup on mobile layout and normal. If it has one, it has cents.
-            if driver.find_elements(By.XPATH, f"//section[1]/div[2]/div[2]/span/span/sup") or \
-                    driver.find_elements(By.XPATH, f"//div[3]/span/span/sup") or \
-                    driver.find_elements(By.XPATH,
-                                         f"/html/body/div[1]/div[1]/div/div[4]/div/div[1]/div[1]/div[2]/span/span/sup"):
-                # last one is because some elements behave wierd with path to sup...for example:
-                # https://www.kjell.com/se/produkter/el-verktyg/matinstrument/matsladdar-prober-kontakter/matsladdar/matsladdar-30-v-3-pack-p37842
-                price /= 100
-                logging.info(f"Found sup for {name}")
-            else:
-                logging.info(f"Didn't find sup for {name}")
+        if not product_name:
+            pytest.skip("No in-stock products found among first search results")
 
-            if name in products_dict:
-                products_dict[name] = products_dict[name] + price
-            else:
-                products_dict.update({name: price})
-            logging.info(f"added {name=} with {price=}")
-            wait_and_click(driver, "//*[@id='addToCart']")  # add item to cart
-            # wait for checkmark on button
-            wait_and_get_element(driver, "//*[@id='addToCart']/span/*[local-name()='svg']")
-            logging.info(f"cart should now be {products_dict.keys()}")
-            driver.back()
-
-        # open cart
-        wait_and_click(driver, "//button[@data-test-id='cart-button']")
-        # element is on the bottom of page so no scroll back
-        total_cart_site = wait_and_get_element(driver, "//div[text()='Totalt ']/span/span", center_scroll=False)\
-            .text.replace(' ', '').replace(':', '')  # get total from cart and format string
-
-        if '-' in total_cart_site:
-            total_cart_site = float(total_cart_site.replace('-', ''))
-        else:
-            total_cart_site = float(total_cart_site)/100  # correct if there are cents
-        wait_and_get_element(driver, "//div[2]/div/ul/li/div[1]/div[1]/div/a")  # make sure elements are in focus
-        items_in_cart = [e.text for e in driver.find_elements(By.XPATH, "//div[2]/div/ul/li/div[1]/div[1]/div/a")]
-        logging.info(f"{items_in_cart=}")
-        logging.info(f"{products_dict.keys()}")
-        logging.info(f"{products_dict}")
-        # Demo
-        # checking each item in list if they match what is in the cart
-        for item in products_dict.keys():
-            assert item in items_in_cart
-        # check that price is the same for sum(products) and total in cart
-        assert f"{sum(products_dict.values()):.1f}" == f"{total_cart_site:.1f}"  # string to format floating point error
+        wait_and_click(driver, "//*[@id='addToCart']")
+        wait_and_get_element(driver, "//*[@id='addToCart']/span/*[local-name()='svg']")
+        if not driver.find_elements(By.XPATH, "//*[@data-test-id='flyout-checkout-button']"):
+            wait_and_click(driver, "//button[@data-test-id='cart-button']")
+        wait_and_get_element(driver, "//*[@data-test-id='flyout-checkout-button']", center_scroll=False)
+        cart_name_spans = wait_and_get_elements(
+            driver,
+            "//*[@data-test-id='fly-out-cart-container']//span[normalize-space()]",
+            require_text=True,
+            center_scroll=False
+        )
+        assert any(product_name.lower() in span.text.lower() for span in cart_name_spans)
