@@ -3,7 +3,7 @@ pipeline {
     agent any
     stages {
 
-        stage ('SkolaTestAutomation - Chrome tests') {
+        stage ('QA-Automation-Selenium-CI - Chrome tests') {
             steps{
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE'){
                     bat encoding: 'UTF-8', script: """
@@ -15,7 +15,7 @@ pipeline {
             }
         }
 
-        stage ('SkolaTestAutomation - Firefox tests') {
+        stage ('QA-Automation-Selenium-CI - Firefox tests') {
             steps{
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE'){
                     bat encoding: 'UTF-8', script: """
@@ -27,7 +27,7 @@ pipeline {
             }
         }
 
-        stage ('SkolaTestAutomation - Edge tests') {
+        stage ('QA-Automation-Selenium-CI - Edge tests') {
             steps{
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE'){
                     bat encoding: 'UTF-8', script: """
