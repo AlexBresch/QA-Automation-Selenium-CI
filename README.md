@@ -1,4 +1,5 @@
 # QA Automation Project – Selenium, Pytest, CI
+[![Run UI Tests](https://github.com/AlexBresch/QA-Automation-Selenium-CI/actions/workflows/test.yml/badge.svg)](https://github.com/AlexBresch/QA-Automation-Selenium-CI/actions/workflows/test.yml)
 
 ## Overview
 
@@ -18,7 +19,6 @@ The test suite covers core user journeys and system behaviour, including:
 * Store selection and session-dependent behaviour
 * Handling of out-of-stock products
 * Adding products to cart
-* Validation of cart contents and total price consistency
 
 The tests aim to verify both functionality and correctness of business logic.
 
@@ -51,7 +51,7 @@ The approach reflects testing in integration-heavy systems, where behaviour and 
 
 ## CI / Automation
 
-Tests are automatically executed using GitHub Actions on push.
+Tests are automatically executed using GitHub Actions on push to `main` and on pull requests.
 
 The project has also been executed in Jenkins, demonstrating experience with both pipeline-based and repository-based CI workflows.
 
@@ -122,7 +122,7 @@ Supported browsers:
 * Handling of dynamic and unstable UI elements
 * Validation of business logic, not only UI elements
 * Structured test execution using pytest
-* Cross-browser test execution
+* Cross-browser test execution in CI (Chrome, Firefox, Edge matrix)
 * CI integration with GitHub Actions and Jenkins
 * Practical use of Python for QA automation
 
@@ -132,7 +132,8 @@ Supported browsers:
 
 * Tests run against a live public website, and behaviour may change over time
 * Some retry logic is implemented to handle dynamic frontend behaviour
-* One test is currently under refinement
+* Chrome is currently used as the primary baseline browser for day-to-day validation
+* Firefox and Edge are included in CI matrix runs, but can be intermittently flaky due to live-site and browser-specific behaviour
 
 ---
 

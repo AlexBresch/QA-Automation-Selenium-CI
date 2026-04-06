@@ -44,7 +44,7 @@ jobs:
         if: matrix.browser == 'edge'
         run: |
           sudo apt update
-          sudo apt install -y microsoft-edge-stable || echo "Edge install failed, continuing"
+          sudo apt install -y microsoft-edge-stable
           
       - name: Run tests
         run: |

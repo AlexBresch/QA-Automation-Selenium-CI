@@ -287,10 +287,10 @@ class TestKjell:
         if not driver.find_elements(By.XPATH, "//*[@data-test-id='flyout-checkout-button']"):
             wait_and_click(driver, "//button[@data-test-id='cart-button']")
         wait_and_get_element(driver, "//*[@data-test-id='flyout-checkout-button']", center_scroll=False)
-        cart_name_spans = wait_and_get_elements(
+        in_cart_spans = wait_and_get_elements(
             driver,
             "//*[@data-test-id='fly-out-cart-container']//span[normalize-space()]",
             require_text=True,
             center_scroll=False
         )
-        assert any(product_name.lower() in span.text.lower() for span in cart_name_spans)
+        assert any(product_name.lower() in span.text.lower() for span in in_cart_spans)
